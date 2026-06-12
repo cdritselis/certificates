@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Επαλήθευση Βεβαίωσης</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      margin: 0;
+      padding: 0;
+    }
+    .wrapper {
+      max-width: 760px;
+      margin: 60px auto;
+      background: white;
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+    h1 {
+      margin-top: 0;
+    }
+    .ok {
+      color: #0a7a2f;
+      font-weight: bold;
+      font-size: 1.3rem;
+    }
+    .bad {
+      color: #b00020;
+      font-weight: bold;
+      font-size: 1.3rem;
+    }
+    .info {
+      text-align: left;
+      margin-top: 24px;
+      display: inline-block;
+      min-width: 320px;
+    }
+    .label {
+      font-weight: bold;
+    }
+    .muted {
+      color: #666;
+      margin-top: 24px;
+      font-size: 0.95rem;
+    }
+    input {
+      padding: 10px;
+      width: 260px;
+      font-size: 1rem;
+    }
+    button {
+      padding: 10px 14px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .search {
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1>Πανεπιστήμιο Θεσσαλίας</h1>
+    <p>Τμήμα Πολιτικών Μηχανικών</p>
+    <h2>Σύστημα Επαλήθευσης Βεβαιώσεων</h2>
+
+    <div class="search">
+      <input id="codeInput" type="text" placeholder="Πληκτρολογήστε κωδικό" />
+      <button onclick="manualVerify()">Έλεγχος</button>
+    </div>
+
+    <p id="result">Γίνεται έλεγχος...</p>
+    <div id="info" class="info"></div>
+
+    <p class="muted">
+      Η επαλήθευση γίνεται με βάση τον μοναδικό κωδικό της βεβαίωσης.
+    </p>
+  </div>
+
+  <script>
+    function getCodeFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("code");
+    }
+
+    async function loadCodes() {
+      const response = await fetch("codes.csv");
+      const text = await response.text();
+      const lines = text.trim().split("\n");
+      const rows = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",");
+        rows.push({
+          code: cols[0]?.trim(),
+          name: cols[1]?.trim(),
+          activity: cols[2]?.trim(),
+          date: cols[3]?.trim()
+        });
+      }
+      return rows;
+    }
+
+    function showValid(entry) {
+      document.getElementById("result").innerHTML =
+        "<span class='ok'>✔ Έγκυρη βεβαίωση</span>";
+
+      document.getElementById("info").innerHTML = `
+        <p><span class="label">Κωδικός:</span> ${entry.code}</p>
+        <p><span class="label">Ονοματεπώνυμο:</span> ${entry.name}</p>
+        <p><span class="label">Δραστηριότητα:</span> ${entry.activity}</p>
+        <p><span class="label">Ημερομηνία:</span> ${entry.date}</p>
+      `;
+    }
+
+    function showInvalid(code) {
+      document.getElementById("result").innerHTML =
+        "<span class='bad'>✘ Ο κωδικός δεν βρέθηκε</span>";
+
+      document.getElementById("info").innerHTML = code
+        ? `<p><span class="label">Κωδικός:</span> ${code}</p>`
+        : "";
+    }
+
+    async function verifyCode(code) {
+      if (!code) {
+        document.getElementById("result").textContent =
+          "Εισάγετε ή ανοίξτε έναν κωδικό επαλήθευσης.";
+        document.getElementById("info").innerHTML = "";
+        return;
+      }
+
+      const rows = await loadCodes();
+      const found = rows.find(r => r.code === code);
+
+      if (found) {
+        showValid(found);
+      } else {
+        showInvalid(code);
+      }
+    }
+
+    function manualVerify() {
+      const code = document.getElementById("codeInput").value.trim();
+      verifyCode(code);
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const code = getCodeFromURL();
+      if (code) {
+        document.getElementById("codeInput").value = code;
+      }
+      verifyCode(code);
+    });
+  </script>
+</body>
+</html>
